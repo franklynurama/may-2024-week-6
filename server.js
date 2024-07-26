@@ -10,12 +10,21 @@ const { check, validationResult } = require("express-validator");
 // Initialize
 const app = express();
 
+// Set up middleware to parse incoming data
+app.use(express.static(__dirname));
+app.use(express.json());
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// app.use(express.static('./script.js'));
+
 // Configure session middleware
 app.use(
   session({
     secret: "wrjhujki68jhsdt54rt5r6y9ywt4swdfer54h5t5e5",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
   })
 );
 
@@ -24,7 +33,7 @@ const connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
   user: "root",
-  password: "",
+  password: "Ff11092003.",
   database: "expense_tracker",
 });
 
@@ -37,16 +46,14 @@ connection.connect((err) => {
   console.log("Connected to MySQL as id " + connection.threadId);
 });
 
-// Set up middleware to parse incoming data
-app.use(express.static(__dirname));
-app.use(express.json());
-app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(bodyParser.urlencoded({ extended: true }));
-
-// Define routes
+// Define route to registratation form
 app.get("/register", (req, res) => {
   res.sendFile(path.join(__dirname, "register.html"));
+});
+
+// Display login page
+app.get("/login", (req, res) => {
+  res.sendFile(path.join(__dirname, "login.html"));
 });
 
 // Define a User representation for clarity
@@ -77,7 +84,7 @@ const User = {
 
 // Registration route
 app.post(
-  "/register",
+  "/api/register",
   [
     // Validate email and username fields
     check("email").isEmail(),
@@ -131,7 +138,7 @@ app.post(
 );
 
 // Login route
-app.post("/login", (req, res) => {
+app.post("/api/login", (req, res) => {
   const { username, password } = req.body;
   // Retrieve user from database
   connection.query(
@@ -149,7 +156,7 @@ app.post("/login", (req, res) => {
           if (isMatch) {
             // Store user in session
             req.session.user = user;
-            res.send("Login successful");
+            res.send("Login successful"); //or res.status(200).json({ message : "Login successful" });
           } else {
             res.status(401).send("Invalid username or password");
           }
@@ -159,11 +166,25 @@ app.post("/login", (req, res) => {
   );
 });
 
+//handle authorization
+const userAuthenticated = (request, response, next) => {
+  if (request.session.user) {
+    next();
+  } else {
+    response.redirect("/login");
+  }
+};
+
 //Dashboard route
-app.get("/dashboard", (req, res) => {
+app.get("/dashboard", userAuthenticated, (req, res) => {
   // Assuming you have middleware to handle user authentication and store user information in req.user
   const userFullName = req.user.full_name;
   res.render("dashboard", { fullName: userFullName });
+});
+
+//destroy session
+app.get("/logout", userAuthenticated, (request, response) => {
+  request.session.destroy();
 });
 
 // Start server
@@ -171,3 +192,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+/*//secure route
+app.get("/dashboard", userAuthenticated, (request, response) => {
+  response.status(200).json({ message: "You are viewing a secured route." });
+});*/
