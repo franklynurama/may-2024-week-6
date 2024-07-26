@@ -33,7 +33,7 @@ const connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
   user: "root",
-  password: "Ff11092003.",
+  password: "",
   database: "expense_tracker",
 });
 
@@ -184,6 +184,7 @@ app.get("/dashboard", userAuthenticated, (req, res) => {
 
 //destroy session
 app.get("/logout", userAuthenticated, (request, response) => {
+  console.log("Logging you out!");
   request.session.destroy();
 });
 
